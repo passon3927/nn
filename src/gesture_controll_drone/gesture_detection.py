@@ -3,6 +3,7 @@ import mediapipe as mp
 import numpy as np
 import time
 from PIL import Image, ImageDraw, ImageFont  
+from functools import lru_cache
 
 class GestureDetector:
     """基于MediaPipe的手势检测类（修复中文显示+帧率显示+摄像头容错）"""
@@ -115,17 +116,23 @@ def put_chinese_text(frame, text, position, font_size=32, color=(0, 255, 0)):
     draw = ImageDraw.Draw(pil_frame)
     
     # 加载中文字体
-    try:
-        font = ImageFont.truetype("simhei.ttf", font_size, encoding="utf-8")
-    except:
-        print("加载中文字体失败，使用默认字体")
-        font = ImageFont.load_default()
+    font = _get_chinese_font(font_size)
     
     # 绘制中文
     draw.text(position, text, font=font, fill=color)
     
     # PIL转OpenCV
     return cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)
+
+
+@lru_cache(maxsize=16)
+def _get_chinese_font(font_size=32):
+    for path in ("simhei.ttf", "C:/Windows/Fonts/simhei.ttf"):
+        try:
+            return ImageFont.truetype(path, font_size, encoding="utf-8")
+        except OSError:
+            continue
+    return ImageFont.load_default()
 
 
 def get_available_camera():
